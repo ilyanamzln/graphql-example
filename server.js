@@ -1,27 +1,32 @@
 const path = require("path");
 const express = require("express");
 
-const { createYoga } = require("graphql-yoga");
 const { loadFilesSync } = require("@graphql-tools/load-files");
 const { makeExecutableSchema } = require("@graphql-tools/schema");
+const { ApolloServer } = require("@apollo/server");
+const { expressMiddleware } = require("@apollo/server/express4");
+const bodyParser = require("body-parser");
 
 const typesArray = loadFilesSync(path.join(__dirname, "**/*.graphql"));
 const resolversArray = loadFilesSync(path.join(__dirname, "**/*.resolvers.js"));
 
-const schema = makeExecutableSchema({
-  typeDefs: typesArray,
-  resolvers: resolversArray,
-});
+async function startApolloServer() {
+  const app = express();
 
-const app = express();
+  const schema = makeExecutableSchema({
+    typeDefs: typesArray,
+    resolvers: resolversArray,
+  });
 
-app.use(
-  "/graphql",
-  createYoga({
-    schema,
-  })
-);
+  const server = new ApolloServer({ schema });
 
-app.listen(3000, () => {
-  console.log("Running GraphQL server on port 3000...");
-});
+  await server.start();
+
+  app.use(bodyParser.json(), expressMiddleware(server));
+
+  app.listen(3000, () => {
+    console.log("🚀 Running GraphQL server on port 3000...");
+  });
+}
+
+startApolloServer();
